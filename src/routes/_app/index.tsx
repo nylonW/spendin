@@ -40,128 +40,31 @@ function WeekView() {
   const weekStartStr = formatDateString(weekDates[0]);
   const weekEndStr = formatDateString(weekDates[6]);
 
-  // Check if selected date is within the visible week
-  const selectedInWeek = selectedDateStr >= weekStartStr && selectedDateStr <= weekEndStr;
-
-  // Query for the visible week (for calendar day totals)
-  const { data: weekExpenses } = useQuery({
-    ...convexQuery(api.expenses.listByDateRange, deviceId ? { deviceId, startDate: weekStartStr, endDate: weekEndStr } : "skip"),
+  // Query 1: Week totals for calendar (pre-computed on server)
+  const { data: weekTotals } = useQuery({
+    ...convexQuery(api.expenses.getWeekTotals, deviceId ? { deviceId, startDate: weekStartStr, endDate: weekEndStr } : "skip"),
     enabled: !!deviceId,
   });
 
-  // Query for the selected date specifically (for the list) - only if outside visible week
-  const { data: selectedDateExpenses } = useQuery({
-    ...convexQuery(api.expenses.listByDateRange, deviceId && !selectedInWeek ? { deviceId, startDate: selectedDateStr, endDate: selectedDateStr } : "skip"),
-    enabled: !!deviceId && !selectedInWeek,
-  });
-
-  const { data: recurringExpenses } = useQuery({
-    ...convexQuery(api.expenses.listByType, deviceId ? { deviceId, type: "recurring" as const } : "skip"),
+  // Query 2: Selected date spending for the list (all-in-one from Convex)
+  const { data: todaySpending } = useQuery({
+    ...convexQuery(api.expenses.getSpendingForDate, deviceId ? { deviceId, date: selectedDateStr } : "skip"),
     enabled: !!deviceId,
   });
 
-  // Query for the visible week lendings (for calendar day totals)
-  const { data: weekLendings } = useQuery({
-    ...convexQuery(api.lending.listByDateRange, deviceId ? { deviceId, startDate: weekStartStr, endDate: weekEndStr } : "skip"),
-    enabled: !!deviceId,
-  });
-
-  // Query for the selected date lendings specifically (for the list) - only if outside visible week
-  const { data: selectedDateLendings } = useQuery({
-    ...convexQuery(api.lending.listByDateRange, deviceId && !selectedInWeek ? { deviceId, startDate: selectedDateStr, endDate: selectedDateStr } : "skip"),
-    enabled: !!deviceId && !selectedInWeek,
-  });
-  const { data: people } = useQuery({
-    ...convexQuery(api.people.list, deviceId ? { deviceId } : "skip"),
-    enabled: !!deviceId,
-  });
   const { data: unpaidBills } = useQuery({
     ...convexQuery(api.bills.getUnpaidWithUpcomingDeadlines, deviceId ? { deviceId, currentDate } : "skip"),
     enabled: !!deviceId,
   });
+
   const addExpense = useMutation(api.expenses.add);
   const removeExpense = useMutation(api.expenses.remove);
   const removeLending = useMutation(api.lending.remove);
   const addBillPayment = useMutation(api.bills.addPayment);
 
-  const peopleMap = new Map(people?.map((p) => [p._id, p.name]) ?? []);
-
-  const getSpendingForDate = (date: Date, forSelectedDate = false): SpendingItem[] => {
+  const getDayTotal = (date: Date): number => {
     const dateStr = formatDateString(date);
-    const dayOfMonth = date.getDate();
-    const isDateInWeek = dateStr >= weekStartStr && dateStr <= weekEndStr;
-
-    // Pick the right data source: use selected date queries if looking at selected date outside week
-    const expenses = forSelectedDate && !isDateInWeek ? selectedDateExpenses : weekExpenses;
-    const lendings = forSelectedDate && !isDateInWeek ? selectedDateLendings : weekLendings;
-
-    // One-time expenses for this date
-    const dayExpenses: SpendingItem[] =
-      expenses
-        ?.filter((e) => e.type === "one-time" && e.date === dateStr)
-        .map((e) => ({
-          type: "expense" as const,
-          id: e._id,
-          name: e.name,
-          amount: e.amount,
-          category: e.category,
-        })) ?? [];
-
-    // Recurring expenses - show on their dayOfMonth (for months after creation) OR on the day they were created
-    const dayRecurring: SpendingItem[] =
-      recurringExpenses
-        ?.filter((e) => {
-          const createdDate = new Date(e.createdAt);
-          const createdDateStr = formatDateString(createdDate);
-
-          // Show on the day it was created (first occurrence)
-          if (createdDateStr === dateStr) return true;
-
-          // Show on the dayOfMonth for months after creation
-          if (e.dayOfMonth === dayOfMonth) {
-            const createdYear = createdDate.getFullYear();
-            const createdMonth = createdDate.getMonth();
-            const currentYear = date.getFullYear();
-            const currentMonth = date.getMonth();
-
-            if (currentYear > createdYear || (currentYear === createdYear && currentMonth > createdMonth)) {
-              return true;
-            }
-            if (currentYear === createdYear && currentMonth === createdMonth) {
-              return createdDate.getDate() <= e.dayOfMonth && date >= createdDate;
-            }
-          }
-          return false;
-        })
-        .map((e) => ({
-          type: "recurring" as const,
-          id: e._id,
-          name: e.name,
-          amount: e.amount,
-          category: e.category,
-          dayOfMonth: e.dayOfMonth ?? 1,
-        })) ?? [];
-
-    // Lending transactions
-    const dayLendings: SpendingItem[] =
-      lendings
-        ?.filter((l) => l.date === dateStr && l.amount > 0)
-        .map((l) => ({
-          type: "lending" as const,
-          id: l._id,
-          name: l.note || "Lent money",
-          amount: l.amount,
-          personName: peopleMap.get(l.personId) ?? "Unknown",
-        })) ?? [];
-
-    return [...dayExpenses, ...dayRecurring, ...dayLendings];
-  };
-
-  const todaySpending = getSpendingForDate(selectedDate, true);
-
-  const getDayTotal = (date: Date) => {
-    const items = getSpendingForDate(date);
-    return items.reduce((sum, item) => sum + item.amount, 0);
+    return weekTotals?.[dateStr] ?? 0;
   };
 
   const goToPrevWeek = () => {
@@ -248,7 +151,7 @@ function WeekView() {
             })}
           </span>
           <span className="text-xs text-muted-foreground ml-2">
-            {formatCurrency(todaySpending.reduce((s, item) => s + item.amount, 0), currency)}
+            {formatCurrency(todaySpending?.reduce((s, item) => s + item.amount, 0) ?? 0, currency)}
           </span>
         </div>
         <AddExpenseDialog
@@ -288,19 +191,19 @@ function WeekView() {
             </div>
           )}
 
-          {todaySpending.length === 0 && (!unpaidBills || unpaidBills.length === 0) ? (
+          {(!todaySpending || todaySpending.length === 0) && (!unpaidBills || unpaidBills.length === 0) ? (
             <div className="text-center py-8 text-muted-foreground text-sm">No spending for this day</div>
-          ) : todaySpending.length === 0 ? null : (
+          ) : !todaySpending || todaySpending.length === 0 ? null : (
             todaySpending.map((item) => (
               <SpendingCard
                 key={`${item.type}-${item.id}`}
-                item={item}
+                item={item as SpendingItem}
                 currency={currency}
                 onRemove={() => {
-                  if (item.type === "expense") {
-                    removeExpense({ deviceId: deviceId!, id: item.id });
+                  if (item.type === "expense" || item.type === "recurring") {
+                    removeExpense({ deviceId: deviceId!, id: item.id as Id<"expenses"> });
                   } else if (item.type === "lending") {
-                    removeLending({ deviceId: deviceId!, id: item.id });
+                    removeLending({ deviceId: deviceId!, id: item.id as Id<"lending"> });
                   }
                 }}
               />
