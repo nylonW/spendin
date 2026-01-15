@@ -10,31 +10,18 @@ import { Card } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
+import { getMonthRange } from "@/lib/date";
+import { CATEGORY_SOLID_COLORS } from "@/constants/categories";
 
 export const Route = createFileRoute("/_app/summary")({
   component: SummaryView,
 });
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Food: "bg-orange-500",
-  Transport: "bg-blue-500",
-  Shopping: "bg-pink-500",
-  Bills: "bg-red-500",
-  Entertainment: "bg-purple-500",
-  Health: "bg-green-500",
-  Other: "bg-gray-500",
-  Subscriptions: "bg-indigo-500",
-};
-
 function SummaryView() {
   const { deviceId, currency } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-  const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  const { startDate, endDate } = getMonthRange(currentMonth);
 
   const { data: allExpenses } = useQuery({
     ...convexQuery(api.expenses.list, deviceId ? { deviceId } : "skip"),
@@ -46,8 +33,7 @@ function SummaryView() {
   });
 
   const oneTimeExpenses =
-    allExpenses?.filter((e) => e.type === "one-time" && e.date >= startDate && e.date <= endDate) ??
-    [];
+    allExpenses?.filter((e) => e.type === "one-time" && e.date >= startDate && e.date <= endDate) ?? [];
   const recurringExpenses = allExpenses?.filter((e) => e.type === "recurring") ?? [];
 
   const oneTimeTotal = oneTimeExpenses.reduce((s, e) => s + e.amount, 0);
@@ -109,15 +95,11 @@ function SummaryView() {
           <div className="grid grid-cols-2 gap-2">
             <Card className="p-3 gap-1">
               <div className="text-xs text-muted-foreground">Total Spending</div>
-              <div className="text-lg font-semibold text-destructive">
-                {formatCurrency(totalSpending, currency)}
-              </div>
+              <div className="text-lg font-semibold text-destructive">{formatCurrency(totalSpending, currency)}</div>
             </Card>
             <Card className="p-3 gap-1">
               <div className="text-xs text-muted-foreground">Remaining</div>
-              <div
-                className={`text-lg font-semibold ${remaining >= 0 ? "text-green-600" : "text-destructive"}`}
-              >
+              <div className={`text-lg font-semibold ${remaining >= 0 ? "text-green-600" : "text-destructive"}`}>
                 {formatCurrency(remaining, currency)}
               </div>
             </Card>
@@ -132,13 +114,16 @@ function SummaryView() {
                   {Math.min(100, Math.round((totalSpending / monthlyIncome) * 100))}%
                 </span>
               </div>
-              <Progress
-                value={Math.min(100, (totalSpending / monthlyIncome) * 100)}
-                className="h-2"
-              />
+              <Progress value={Math.min(100, (totalSpending / monthlyIncome) * 100)} className="h-2" />
               <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
-                <span>{formatCurrency(totalSpending, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })} spent</span>
-                <span>{formatCurrency(monthlyIncome, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })} income</span>
+                <span>
+                  {formatCurrency(totalSpending, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })}{" "}
+                  spent
+                </span>
+                <span>
+                  {formatCurrency(monthlyIncome, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })}{" "}
+                  income
+                </span>
               </div>
             </Card>
           )}
@@ -150,9 +135,7 @@ function SummaryView() {
             </div>
             <div className="space-y-2">
               {sortedCategories.length === 0 ? (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  No expenses this month
-                </div>
+                <div className="text-center py-4 text-muted-foreground text-sm">No expenses this month</div>
               ) : (
                 sortedCategories.map(([category, amount]) => {
                   const percentage = totalSpending > 0 ? (amount / totalSpending) * 100 : 0;
@@ -161,7 +144,7 @@ function SummaryView() {
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`size-2.5 rounded-full ${CATEGORY_COLORS[category] || "bg-gray-500"}`}
+                            className={`size-2.5 rounded-full ${CATEGORY_SOLID_COLORS[category] || "bg-gray-500"}`}
                           />
                           <span className="text-sm">{category}</span>
                         </div>

@@ -59,7 +59,6 @@ function SettingsView() {
 
   return (
     <div className="p-3 space-y-4">
-      {/* Currency */}
       <Card className="p-4 block">
         <div className="flex items-center gap-2 mb-3">
           <Coins className="size-4 text-primary" />

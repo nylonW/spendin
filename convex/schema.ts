@@ -55,6 +55,20 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
 
+  additionalIncome: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    amount: v.number(),
+    source: v.string(), // "Freelance", "Gift", "Rental", etc.
+    type: v.union(v.literal("one-time"), v.literal("recurring")),
+    date: v.string(), // ISO date string for one-time, or day of month for recurring
+    dayOfMonth: v.optional(v.number()), // 1-31 for recurring income
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_type", ["userId", "type"])
+    .index("by_user_date", ["userId", "date"]),
+
   bills: defineTable({
     userId: v.id("users"),
     name: v.string(), // "Electricity", "Internet", "Rent - Landlord"

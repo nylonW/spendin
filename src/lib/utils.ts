@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { formatDateString } from "./date"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -68,8 +69,8 @@ export function getCurrentBillingPeriod(
       const start = new Date(year, month, 1);
       const end = new Date(year, month + 1, 0);
       return {
-        start: start.toISOString().split("T")[0],
-        end: end.toISOString().split("T")[0],
+        start: formatDateString(start),
+        end: formatDateString(end),
         label: start.toLocaleDateString("en", { month: "long", year: "numeric" }),
       };
     }
@@ -80,8 +81,8 @@ export function getCurrentBillingPeriod(
       const startLabel = start.toLocaleDateString("en", { month: "short" });
       const endLabel = new Date(year, periodMonth + 1, 1).toLocaleDateString("en", { month: "short" });
       return {
-        start: start.toISOString().split("T")[0],
-        end: end.toISOString().split("T")[0],
+        start: formatDateString(start),
+        end: formatDateString(end),
         label: `${startLabel}-${endLabel} ${year}`,
       };
     }
@@ -90,8 +91,8 @@ export function getCurrentBillingPeriod(
       const start = new Date(year, quarter * 3, 1);
       const end = new Date(year, quarter * 3 + 3, 0);
       return {
-        start: start.toISOString().split("T")[0],
-        end: end.toISOString().split("T")[0],
+        start: formatDateString(start),
+        end: formatDateString(end),
         label: `Q${quarter + 1} ${year}`,
       };
     }
@@ -99,8 +100,8 @@ export function getCurrentBillingPeriod(
       const start = new Date(year, 0, 1);
       const end = new Date(year, 11, 31);
       return {
-        start: start.toISOString().split("T")[0],
-        end: end.toISOString().split("T")[0],
+        start: formatDateString(start),
+        end: formatDateString(end),
         label: String(year),
       };
     }
@@ -133,7 +134,7 @@ export function getDeadlineDate(periodStart: string, deadlineDay: number): strin
   const actualDay = Math.min(deadlineDay, lastDayOfMonth);
 
   const deadlineDate = new Date(year, month, actualDay);
-  return deadlineDate.toISOString().split("T")[0];
+  return formatDateString(deadlineDate);
 }
 
 /**
