@@ -200,7 +200,7 @@ function WeekView() {
                 item={item as SpendingItem}
                 currency={currency}
                 onRemove={() => {
-                  if (item.type === "expense" || item.type === "recurring") {
+                  if (item.type === "expense" || item.type === "recurring" || item.type === "bill") {
                     removeExpense({ deviceId: deviceId!, id: item.id as Id<"expenses"> });
                   } else if (item.type === "lending") {
                     removeLending({ deviceId: deviceId!, id: item.id as Id<"lending"> });

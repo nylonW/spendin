@@ -87,6 +87,10 @@ export const CATEGORY_SOLID_COLORS: Record<string, string> = {
   Health: "bg-green-500",
   Other: "bg-gray-500",
   Subscriptions: "bg-indigo-500",
+  Lending: "bg-amber-500",
+  Utilities: "bg-cyan-500",
+  Housing: "bg-teal-500",
+  Insurance: "bg-slate-500",
 };
 
 // Income source styling

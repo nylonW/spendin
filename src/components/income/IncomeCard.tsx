@@ -35,6 +35,9 @@ export function IncomeCard({ income, currency, onDelete }: IncomeCardProps) {
             {income.type === "recurring" && income.dayOfMonth && (
               <span>Every {getOrdinalSuffix(income.dayOfMonth)}</span>
             )}
+            {income.type === "one-time" && income.date && (
+              <span>{new Date(income.date + "T00:00:00").toLocaleDateString("en", { month: "short", day: "numeric" })}</span>
+            )}
           </div>
         </div>
       </div>

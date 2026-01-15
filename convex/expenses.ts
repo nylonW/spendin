@@ -196,18 +196,29 @@ export const getSpendingForDate = query({
     const people = await Promise.all(personIds.map((id) => ctx.db.get(id)));
     const peopleMap = new Map(people.filter(Boolean).map((p) => [p!._id, p!.name]));
 
+    // Separate one-time expenses into regular and bill payments
+    const regularExpenses = oneTimeExpenses.filter((e) => e.type === "one-time" && !e.billId);
+    const billPayments = oneTimeExpenses.filter((e) => e.type === "one-time" && e.billId);
+
     // Build unified spending items array
     const items = [
-      ...oneTimeExpenses
-        .filter((e) => e.type === "one-time")
-        .map((e) => ({
-          type: "expense" as const,
-          id: e._id,
-          name: e.name,
-          amount: e.amount,
-          category: e.category,
-          createdAt: e.createdAt,
-        })),
+      ...regularExpenses.map((e) => ({
+        type: "expense" as const,
+        id: e._id,
+        name: e.name,
+        amount: e.amount,
+        category: e.category,
+        createdAt: e.createdAt,
+      })),
+      ...billPayments.map((e) => ({
+        type: "bill" as const,
+        id: e._id,
+        name: e.name,
+        amount: e.amount,
+        category: e.category,
+        billId: e.billId,
+        createdAt: e.createdAt,
+      })),
       ...recurringForDate.map((e) => ({
         type: "recurring" as const,
         id: e._id,

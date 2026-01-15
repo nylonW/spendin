@@ -11,8 +11,8 @@ export interface NewBill {
 }
 
 export interface BillPayment {
-  _id: Id<"billPayments">;
-  billId: Id<"bills">;
+  _id: Id<"expenses">; // Bill payments are now stored as expenses
+  billId: Id<"bills"> | undefined;
   amount: number;
   periodStart: string;
   periodEnd: string;

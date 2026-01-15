@@ -25,11 +25,15 @@ export default defineSchema({
     type: v.union(v.literal("one-time"), v.literal("recurring")),
     date: v.string(), // ISO date string for one-time, or day of month for recurring
     dayOfMonth: v.optional(v.number()), // 1-31 for recurring expenses
+    billId: v.optional(v.id("bills")), // Link to bill definition (for bill payments)
+    periodStart: v.optional(v.string()), // For bill payments: start of billing period
+    periodEnd: v.optional(v.string()), // For bill payments: end of billing period
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
     .index("by_user_type", ["userId", "type"])
-    .index("by_user_date", ["userId", "date"]),
+    .index("by_user_date", ["userId", "date"])
+    .index("by_bill", ["billId"]),
 
   people: defineTable({
     userId: v.id("users"),

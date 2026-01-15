@@ -11,10 +11,13 @@
 import type * as additionalIncome from "../additionalIncome.js";
 import type * as bills from "../bills.js";
 import type * as expenses from "../expenses.js";
+import type * as helpers_financials from "../helpers/financials.js";
 import type * as income from "../income.js";
 import type * as lending from "../lending.js";
+import type * as migrations_migrateBillPayments from "../migrations/migrateBillPayments.js";
 import type * as model_users from "../model/users.js";
 import type * as people from "../people.js";
+import type * as summary from "../summary.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,10 +30,13 @@ declare const fullApi: ApiFromModules<{
   additionalIncome: typeof additionalIncome;
   bills: typeof bills;
   expenses: typeof expenses;
+  "helpers/financials": typeof helpers_financials;
   income: typeof income;
   lending: typeof lending;
+  "migrations/migrateBillPayments": typeof migrations_migrateBillPayments;
   "model/users": typeof model_users;
   people: typeof people;
+  summary: typeof summary;
   users: typeof users;
 }>;
 

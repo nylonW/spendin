@@ -4,6 +4,7 @@ export type ExpenseType = "one-time" | "recurring";
 
 export type SpendingItem =
   | { type: "expense"; id: Id<"expenses">; name: string; amount: number; category: string; createdAt: number }
+  | { type: "bill"; id: Id<"expenses">; name: string; amount: number; category: string; billId: Id<"bills">; createdAt: number }
   | { type: "lending"; id: Id<"lending">; name: string; amount: number; personName: string; createdAt: number }
   | { type: "recurring"; id: Id<"expenses">; name: string; amount: number; category: string; dayOfMonth: number; createdAt: number };
 

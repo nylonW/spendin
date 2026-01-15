@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, RefreshCw, MoreHorizontal } from "lucide-react";
+import { Trash2, RefreshCw, MoreHorizontal, Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { CATEGORY_COLORS, CATEGORY_ICONS } from "@/constants/categories";
 import type { SpendingItem } from "@/types/expenses";
@@ -14,6 +14,7 @@ interface SpendingCardProps {
 export function SpendingCard({ item, currency, onRemove }: SpendingCardProps) {
   const isLending = item.type === "lending";
   const isRecurring = item.type === "recurring";
+  const isBill = item.type === "bill";
   const category = isLending ? "Lending" : item.category;
   const Icon = CATEGORY_ICONS[isLending ? "Lending" : item.category] || MoreHorizontal;
   const colorClass = CATEGORY_COLORS[isLending ? "Lending" : item.category] || CATEGORY_COLORS.Other;
@@ -36,6 +37,15 @@ export function SpendingCard({ item, currency, onRemove }: SpendingCardProps) {
               <span className="flex items-center gap-0.5">
                 <RefreshCw className="size-2.5" />
                 Monthly
+              </span>
+            </>
+          )}
+          {isBill && (
+            <>
+              <span className="size-0.5 rounded-full bg-muted-foreground/50" />
+              <span className="flex items-center gap-0.5">
+                <Receipt className="size-2.5" />
+                Bill
               </span>
             </>
           )}

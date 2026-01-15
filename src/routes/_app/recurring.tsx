@@ -259,7 +259,7 @@ function BillsTab({ deviceId, currency }: { deviceId: string | null; currency: s
                   onPaymentDateChange={setPaymentDate}
                   onPay={() => handlePayBill(bill)}
                   onRemove={() => removeBill({ deviceId: deviceId!, id: bill._id })}
-                  onRemovePayment={(paymentId) => removePayment({ deviceId: deviceId!, id: paymentId as Id<"billPayments"> })}
+                  onRemovePayment={(paymentId) => removePayment({ deviceId: deviceId!, id: paymentId as Id<"expenses"> })}
                 />
               );
             })

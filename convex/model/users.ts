@@ -163,7 +163,16 @@ export async function deleteUserAndData(
     await ctx.db.delete(income._id);
   }
 
-  // Delete all bill payments
+  // Delete all additional income
+  const additionalIncome = await ctx.db
+    .query("additionalIncome")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const inc of additionalIncome) {
+    await ctx.db.delete(inc._id);
+  }
+
+  // Delete all bill payments (legacy - kept for migration compatibility)
   const billPayments = await ctx.db
     .query("billPayments")
     .withIndex("by_user", (q) => q.eq("userId", userId))

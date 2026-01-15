@@ -7,7 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingDown, TrendingUp, Receipt, HandCoins } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { getMonthRange } from "@/lib/date";
@@ -23,35 +23,35 @@ function SummaryView() {
 
   const { startDate, endDate } = getMonthRange(currentMonth);
 
-  const { data: allExpenses } = useQuery({
-    ...convexQuery(api.expenses.list, deviceId ? { deviceId } : "skip"),
-    enabled: !!deviceId,
-  });
-  const { data: income } = useQuery({
-    ...convexQuery(api.income.get, deviceId ? { deviceId } : "skip"),
+  // Use the new consolidated financial summary query
+  const { data: summary } = useQuery({
+    ...convexQuery(api.summary.getMonthlyFinancialSummary, deviceId ? { deviceId, startDate, endDate } : "skip"),
     enabled: !!deviceId,
   });
 
-  const oneTimeExpenses =
-    allExpenses?.filter((e) => e.type === "one-time" && e.date >= startDate && e.date <= endDate) ?? [];
-  const recurringExpenses = allExpenses?.filter((e) => e.type === "recurring") ?? [];
+  // Extract data from summary
+  const spending = summary?.spending;
+  const income = summary?.income;
 
-  const oneTimeTotal = oneTimeExpenses.reduce((s, e) => s + e.amount, 0);
-  const recurringTotal = recurringExpenses.reduce((s, e) => s + e.amount, 0);
-  const totalSpending = oneTimeTotal + recurringTotal;
-
-  const monthlyIncome = income?.salary ?? 0;
+  const totalSpending = spending?.totals.total ?? 0;
+  const totalIncome = income?.totals.total ?? 0;
+  const remaining = summary?.remaining ?? 0;
   const savings = income?.savings ?? 0;
-  const remaining = monthlyIncome - totalSpending;
 
-  const categoryTotals: Record<string, number> = {};
-  for (const exp of oneTimeExpenses) {
-    categoryTotals[exp.category] = (categoryTotals[exp.category] ?? 0) + exp.amount;
-  }
-  for (const exp of recurringExpenses) {
-    categoryTotals["Subscriptions"] = (categoryTotals["Subscriptions"] ?? 0) + exp.amount;
-  }
+  // Spending breakdown
+  const oneTimeTotal = spending?.totals.oneTime ?? 0;
+  const recurringTotal = spending?.totals.recurring ?? 0;
+  const billsTotal = spending?.totals.bills ?? 0;
+  const lendingTotal = spending?.totals.lending ?? 0;
 
+  // Income breakdown
+  const baseSalary = income?.totals.salary ?? 0;
+  const recurringIncomeTotal = income?.totals.recurring ?? 0;
+  const oneTimeIncomeTotal = income?.totals.oneTime ?? 0;
+  const lendingRepaidTotal = income?.totals.lendingRepaid ?? 0;
+
+  // Category totals from the helper
+  const categoryTotals = spending?.byCategory ?? {};
   const sortedCategories = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a);
 
   const goToPrevMonth = () => {
@@ -106,24 +106,60 @@ function SummaryView() {
           </div>
 
           {/* Income vs Spending */}
-          {monthlyIncome > 0 && (
+          {totalIncome > 0 && (
             <Card className="p-3 gap-2">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Budget Used</span>
                 <span className="text-xs font-medium">
-                  {Math.min(100, Math.round((totalSpending / monthlyIncome) * 100))}%
+                  {Math.min(100, Math.round((totalSpending / totalIncome) * 100))}%
                 </span>
               </div>
-              <Progress value={Math.min(100, (totalSpending / monthlyIncome) * 100)} className="h-2" />
+              <Progress value={Math.min(100, (totalSpending / totalIncome) * 100)} className="h-2" />
               <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
                 <span>
                   {formatCurrency(totalSpending, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })}{" "}
                   spent
                 </span>
                 <span>
-                  {formatCurrency(monthlyIncome, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })}{" "}
+                  {formatCurrency(totalIncome, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })}{" "}
                   income
                 </span>
+              </div>
+            </Card>
+          )}
+
+          {/* Income Breakdown (if there's additional income or lending repayments) */}
+          {(recurringIncomeTotal > 0 || oneTimeIncomeTotal > 0 || lendingRepaidTotal > 0) && (
+            <Card className="p-3 gap-1">
+              <div className="text-xs text-muted-foreground mb-2">Income Sources</div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Base Salary</span>
+                  <span>{formatCurrency(baseSalary, currency)}</span>
+                </div>
+                {recurringIncomeTotal > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Recurring</span>
+                    <span>+{formatCurrency(recurringIncomeTotal, currency)}</span>
+                  </div>
+                )}
+                {oneTimeIncomeTotal > 0 && (
+                  <div className="flex justify-between text-emerald-600">
+                    <span>One-time</span>
+                    <span>+{formatCurrency(oneTimeIncomeTotal, currency)}</span>
+                  </div>
+                )}
+                {lendingRepaidTotal > 0 && (
+                  <div className="flex justify-between text-blue-600">
+                    <span>Money Returned</span>
+                    <span>+{formatCurrency(lendingRepaidTotal, currency)}</span>
+                  </div>
+                )}
+                <div className="h-px bg-border my-1" />
+                <div className="flex justify-between font-medium">
+                  <span>Total</span>
+                  <span>{formatCurrency(totalIncome, currency)}</span>
+                </div>
               </div>
             </Card>
           )}
@@ -174,12 +210,30 @@ function SummaryView() {
               </div>
               <div className="text-sm font-medium">{formatCurrency(recurringTotal, currency)}</div>
             </Card>
+            {billsTotal > 0 && (
+              <Card className="p-3 gap-1">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Receipt className="size-3 text-purple-500" />
+                  <span className="text-xs text-muted-foreground">Bills</span>
+                </div>
+                <div className="text-sm font-medium">{formatCurrency(billsTotal, currency)}</div>
+              </Card>
+            )}
+            {lendingTotal > 0 && (
+              <Card className="p-3 gap-1">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <HandCoins className="size-3 text-amber-500" />
+                  <span className="text-xs text-muted-foreground">Lent</span>
+                </div>
+                <div className="text-sm font-medium">{formatCurrency(lendingTotal, currency)}</div>
+              </Card>
+            )}
           </div>
 
           {/* Savings */}
           {savings > 0 && (
             <Card className="p-3 gap-1">
-              <div className="text-xs text-muted-foreground mb-1">Current Savings</div>
+              <div className="text-xs text-muted-foreground mb-1">Monthly Savings Goal</div>
               <div className="text-lg font-semibold text-green-600">{formatCurrency(savings, currency)}</div>
             </Card>
           )}

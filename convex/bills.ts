@@ -84,13 +84,13 @@ export const remove = mutation({
       throw new Error("Bill not found");
     }
 
-    // Delete all associated payments
-    const payments = await ctx.db
-      .query("billPayments")
+    // Delete all associated payment expenses (expenses with this billId)
+    const paymentExpenses = await ctx.db
+      .query("expenses")
       .withIndex("by_bill", (q) => q.eq("billId", id))
       .collect();
-    for (const payment of payments) {
-      await ctx.db.delete(payment._id);
+    for (const expense of paymentExpenses) {
+      await ctx.db.delete(expense._id);
     }
 
     await ctx.db.delete(id);
@@ -112,6 +112,7 @@ export const deactivate = mutation({
   },
 });
 
+// Get payments for a specific bill (now queries expenses with billId)
 export const getPayments = query({
   args: { deviceId: v.string(), billId: v.id("bills") },
   handler: async (ctx, { deviceId, billId }) => {
@@ -123,24 +124,54 @@ export const getPayments = query({
       throw new Error("Bill not found");
     }
 
-    return await ctx.db
-      .query("billPayments")
+    const expenses = await ctx.db
+      .query("expenses")
       .withIndex("by_bill", (q) => q.eq("billId", billId))
       .collect();
+
+    // Return in payment-like format for compatibility
+    return expenses.map((e) => ({
+      _id: e._id,
+      _creationTime: e._creationTime,
+      userId: e.userId,
+      billId: e.billId,
+      amount: e.amount,
+      periodStart: e.periodStart ?? "",
+      periodEnd: e.periodEnd ?? "",
+      paidAt: e.date,
+      createdAt: e.createdAt,
+    }));
   },
 });
 
+// Get all bill payments for user (queries expenses with billId set)
 export const getAllPayments = query({
   args: { deviceId: v.string() },
   handler: async (ctx, { deviceId }) => {
     const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
-    return await ctx.db
-      .query("billPayments")
+    const expenses = await ctx.db
+      .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
+
+    // Filter to only expenses that are bill payments and return in payment-like format
+    return expenses
+      .filter((e) => e.billId)
+      .map((e) => ({
+        _id: e._id,
+        _creationTime: e._creationTime,
+        userId: e.userId,
+        billId: e.billId,
+        amount: e.amount,
+        periodStart: e.periodStart ?? "",
+        periodEnd: e.periodEnd ?? "",
+        paidAt: e.date,
+        createdAt: e.createdAt,
+      }));
   },
 });
 
+// Add a bill payment (creates an expense with billId)
 export const addPayment = mutation({
   args: {
     deviceId: v.string(),
@@ -150,7 +181,7 @@ export const addPayment = mutation({
     periodEnd: v.string(),
     paidAt: v.string(),
   },
-  handler: async (ctx, { deviceId, billId, ...args }) => {
+  handler: async (ctx, { deviceId, billId, amount, periodStart, periodEnd, paidAt }) => {
     const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
 
     // Verify bill ownership
@@ -159,37 +190,50 @@ export const addPayment = mutation({
       throw new Error("Bill not found");
     }
 
-    // Check if already paid for this period
+    // Check if already paid for this period (check expenses with this billId)
     const existingPayments = await ctx.db
-      .query("billPayments")
+      .query("expenses")
       .withIndex("by_bill", (q) => q.eq("billId", billId))
       .collect();
 
     const alreadyPaid = existingPayments.some(
-      (p) => p.periodStart === args.periodStart && p.periodEnd === args.periodEnd
+      (p) => p.periodStart === periodStart && p.periodEnd === periodEnd
     );
 
     if (alreadyPaid) {
       throw new Error("Bill already paid for this period");
     }
 
-    return await ctx.db.insert("billPayments", {
+    // Create expense with billId
+    return await ctx.db.insert("expenses", {
       userId,
+      name: bill.name,
+      amount,
+      category: bill.category,
+      type: "one-time",
+      date: paidAt,
       billId,
-      ...args,
+      periodStart,
+      periodEnd,
       createdAt: Date.now(),
     });
   },
 });
 
+// Remove a bill payment (deletes the expense)
 export const removePayment = mutation({
-  args: { deviceId: v.string(), id: v.id("billPayments") },
+  args: { deviceId: v.string(), id: v.id("expenses") },
   handler: async (ctx, { deviceId, id }) => {
     const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
 
-    const payment = await ctx.db.get(id);
-    if (!payment || payment.userId !== userId) {
+    const expense = await ctx.db.get(id);
+    if (!expense || expense.userId !== userId) {
       throw new Error("Payment not found");
+    }
+
+    // Verify this is actually a bill payment
+    if (!expense.billId) {
+      throw new Error("This is not a bill payment");
     }
 
     await ctx.db.delete(id);
@@ -207,27 +251,45 @@ export const listWithStatus = query({
       .withIndex("by_user_active", (q) => q.eq("userId", userId).eq("isActive", true))
       .collect();
 
-    const allPayments = await ctx.db
-      .query("billPayments")
+    // Get all expenses that are bill payments
+    const allExpenses = await ctx.db
+      .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
+    const billPayments = allExpenses.filter((e) => e.billId);
+
     // Group payments by bill
-    const paymentsByBill = new Map<string, typeof allPayments>();
-    for (const payment of allPayments) {
-      const billPayments = paymentsByBill.get(payment.billId) ?? [];
-      billPayments.push(payment);
-      paymentsByBill.set(payment.billId, billPayments);
+    const paymentsByBill = new Map<string, typeof billPayments>();
+    for (const payment of billPayments) {
+      if (!payment.billId) continue;
+      const payments = paymentsByBill.get(payment.billId) ?? [];
+      payments.push(payment);
+      paymentsByBill.set(payment.billId, payments);
     }
 
     return bills.map((bill) => {
       const payments = paymentsByBill.get(bill._id) ?? [];
       // Sort payments by periodStart descending to get latest first
       const sortedPayments = [...payments].sort(
-        (a, b) => new Date(b.periodStart).getTime() - new Date(a.periodStart).getTime()
+        (a, b) => new Date(b.periodStart ?? "").getTime() - new Date(a.periodStart ?? "").getTime()
       );
-      const latestPayment = sortedPayments[0];
-      const previousPayment = sortedPayments[1];
+
+      // Map to payment-like format for compatibility
+      const formattedPayments = sortedPayments.map((e) => ({
+        _id: e._id,
+        _creationTime: e._creationTime,
+        userId: e.userId,
+        billId: e.billId,
+        amount: e.amount,
+        periodStart: e.periodStart ?? "",
+        periodEnd: e.periodEnd ?? "",
+        paidAt: e.date,
+        createdAt: e.createdAt,
+      }));
+
+      const latestPayment = formattedPayments[0];
+      const previousPayment = formattedPayments[1];
 
       // Calculate trend
       let trend: { direction: "up" | "down" | "same"; percentage: number } | null = null;
@@ -242,7 +304,7 @@ export const listWithStatus = query({
 
       return {
         ...bill,
-        payments: sortedPayments,
+        payments: formattedPayments,
         latestPayment,
         trend,
       };
@@ -262,17 +324,21 @@ export const getUnpaidWithUpcomingDeadlines = query({
       .withIndex("by_user_active", (q) => q.eq("userId", userId).eq("isActive", true))
       .collect();
 
-    const allPayments = await ctx.db
-      .query("billPayments")
+    // Get all expenses that are bill payments
+    const allExpenses = await ctx.db
+      .query("expenses")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
+    const billPayments = allExpenses.filter((e) => e.billId);
+
     // Group payments by bill
-    const paymentsByBill = new Map<string, typeof allPayments>();
-    for (const payment of allPayments) {
-      const billPayments = paymentsByBill.get(payment.billId) ?? [];
-      billPayments.push(payment);
-      paymentsByBill.set(payment.billId, billPayments);
+    const paymentsByBill = new Map<string, typeof billPayments>();
+    for (const payment of billPayments) {
+      if (!payment.billId) continue;
+      const payments = paymentsByBill.get(payment.billId) ?? [];
+      payments.push(payment);
+      paymentsByBill.set(payment.billId, payments);
     }
 
     const unpaidBillsWithDeadlines: Array<{
