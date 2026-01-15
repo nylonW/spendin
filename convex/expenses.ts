@@ -197,12 +197,7 @@ export const getSpendingForDate = query({
     const peopleMap = new Map(people.filter(Boolean).map((p) => [p!._id, p!.name]));
 
     // Build unified spending items array
-    type SpendingItem =
-      | { type: "expense"; id: string; name: string; amount: number; category: string }
-      | { type: "recurring"; id: string; name: string; amount: number; category: string; dayOfMonth: number }
-      | { type: "lending"; id: string; name: string; amount: number; personName: string };
-
-    const items: SpendingItem[] = [
+    const items = [
       ...oneTimeExpenses
         .filter((e) => e.type === "one-time")
         .map((e) => ({
@@ -211,6 +206,7 @@ export const getSpendingForDate = query({
           name: e.name,
           amount: e.amount,
           category: e.category,
+          createdAt: e.createdAt,
         })),
       ...recurringForDate.map((e) => ({
         type: "recurring" as const,
@@ -219,6 +215,7 @@ export const getSpendingForDate = query({
         amount: e.amount,
         category: e.category,
         dayOfMonth: e.dayOfMonth ?? 1,
+        createdAt: e.createdAt,
       })),
       ...lendingsForDate.map((l) => ({
         type: "lending" as const,
@@ -226,8 +223,12 @@ export const getSpendingForDate = query({
         name: l.note || "Lent money",
         amount: l.amount,
         personName: peopleMap.get(l.personId) ?? "Unknown",
+        createdAt: l._creationTime,
       })),
     ];
+
+    // Sort by creation time from earliest to latest
+    items.sort((a, b) => a.createdAt - b.createdAt);
 
     return items;
   },
