@@ -60,7 +60,7 @@ function SettingsView() {
   return (
     <div className="p-3 space-y-4">
       {/* Currency */}
-      <Card className="p-4">
+      <Card className="p-4 block">
         <div className="flex items-center gap-2 mb-3">
           <Coins className="size-4 text-primary" />
           <h3 className="text-sm font-medium">Currency</h3>
@@ -85,7 +85,7 @@ function SettingsView() {
       </Card>
 
       {/* Device Sync */}
-      <Card className="p-4">
+      <Card className="p-4 block">
         <div className="flex items-center gap-2 mb-3">
           <Smartphone className="size-4 text-primary" />
           <h3 className="text-sm font-medium">Sync Devices</h3>
@@ -156,7 +156,7 @@ function SettingsView() {
       </Card>
 
       {/* About */}
-      <Card className="p-4">
+      <Card className="p-4 block">
         <h3 className="text-sm font-medium mb-2">About spendin</h3>
         <p className="text-xs text-muted-foreground">
           A simple expense tracker to help you manage your daily spending, recurring expenses, and

@@ -4,6 +4,7 @@ import { convexQuery } from "@convex-dev/react-query";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@/lib/auth";
+import { formatCurrency } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/_app/income")({
 });
 
 function IncomeView() {
-  const { deviceId, currencySymbol } = useAuth();
+  const { deviceId, currency, currencySymbol } = useAuth();
   const { data: income } = useQuery({
     ...convexQuery(api.income.get, deviceId ? { deviceId } : "skip"),
     enabled: !!deviceId,
@@ -69,7 +70,7 @@ function IncomeView() {
   return (
     <div className="p-3 space-y-4">
       {/* Monthly Salary */}
-      <Card className="p-4">
+      <Card className="p-4 block">
         <div className="flex items-center gap-2 mb-3">
           <Wallet className="size-4 text-primary" />
           <h3 className="text-sm font-medium">Monthly Salary</h3>
@@ -93,7 +94,7 @@ function IncomeView() {
       </Card>
 
       {/* Savings Goal */}
-      <Card className="p-4">
+      <Card className="p-4 block">
         <div className="flex items-center gap-2 mb-3">
           <PiggyBank className="size-4 text-green-600" />
           <h3 className="text-sm font-medium">Monthly Savings</h3>
@@ -124,30 +125,30 @@ function IncomeView() {
       )}
 
       {/* Summary */}
-      <Card className="p-4 space-y-3">
+      <Card className="p-4 block space-y-3">
         <h3 className="text-sm font-medium">Monthly Breakdown</h3>
 
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Monthly Income</span>
-            <span className="font-medium">{currencySymbol}{salaryNum.toFixed(2)}</span>
+            <span className="font-medium">{formatCurrency(salaryNum, currency)}</span>
           </div>
 
           <div className="flex justify-between text-destructive">
             <span>Recurring Expenses</span>
-            <span>-{currencySymbol}{monthlyRecurring.toFixed(2)}</span>
+            <span>-{formatCurrency(monthlyRecurring, currency)}</span>
           </div>
 
           <div className="h-px bg-border" />
 
           <div className="flex justify-between">
             <span className="text-muted-foreground">After Recurring</span>
-            <span className="font-medium">{currencySymbol}{afterRecurring.toFixed(2)}</span>
+            <span className="font-medium">{formatCurrency(afterRecurring, currency)}</span>
           </div>
 
           <div className="flex justify-between text-green-600">
             <span>Monthly Savings</span>
-            <span>-{currencySymbol}{savingsNum.toFixed(2)}</span>
+            <span>-{formatCurrency(savingsNum, currency)}</span>
           </div>
 
           <div className="h-px bg-border" />
@@ -157,7 +158,7 @@ function IncomeView() {
             <span
               className={`font-semibold ${afterSavings >= 0 ? "text-primary" : "text-destructive"}`}
             >
-              {currencySymbol}{afterSavings.toFixed(2)}
+              {formatCurrency(afterSavings, currency)}
             </span>
           </div>
         </div>

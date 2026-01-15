@@ -54,4 +54,31 @@ export default defineSchema({
     savings: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  bills: defineTable({
+    userId: v.id("users"),
+    name: v.string(), // "Electricity", "Internet", "Rent - Landlord"
+    category: v.string(), // "Utilities", "Housing", etc.
+    frequency: v.string(), // "monthly", "bimonthly", "quarterly", "yearly"
+    expectedAmount: v.optional(v.number()), // Optional - for variable bills like utilities
+    deadlineDay: v.optional(v.number()), // Day of period (1-31) - null means no deadline
+    reminderDaysBefore: v.optional(v.number()), // Days before deadline to show warning (default: 3)
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_active", ["userId", "isActive"]),
+
+  billPayments: defineTable({
+    userId: v.id("users"),
+    billId: v.id("bills"),
+    amount: v.number(), // Actual amount paid
+    periodStart: v.string(), // ISO date - start of billing period
+    periodEnd: v.string(), // ISO date - end of billing period
+    paidAt: v.string(), // ISO date when payment was made
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_bill", ["billId"])
+    .index("by_user_period", ["userId", "periodStart"]),
 });

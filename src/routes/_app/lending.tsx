@@ -4,6 +4,7 @@ import { convexQuery } from "@convex-dev/react-query";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@/lib/auth";
+import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/_app/lending")({
 });
 
 function LendingView() {
-  const { deviceId, currencySymbol } = useAuth();
+  const { deviceId, currency } = useAuth();
   const [isAddPersonOpen, setIsAddPersonOpen] = useState(false);
   const [isAddLendingOpen, setIsAddLendingOpen] = useState(false);
   const [newPersonName, setNewPersonName] = useState("");
@@ -107,7 +108,7 @@ function LendingView() {
           <div>
             <span className="text-sm font-medium">Money Lent</span>
             <span className="text-xs text-muted-foreground ml-2">
-              {currencySymbol}{totalOwed.toFixed(2)} owed to you
+              {formatCurrency(totalOwed, currency)} owed to you
             </span>
           </div>
           <div className="flex gap-1">
@@ -243,7 +244,7 @@ function LendingView() {
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
               return (
-                <Card key={person._id} className="p-2.5">
+                <Card key={person._id} className="p-2.5 block">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <div className="size-7 rounded-full bg-muted flex items-center justify-center">
@@ -263,7 +264,7 @@ function LendingView() {
                         }
                       >
                         {person.balance > 0
-                          ? `owes ${currencySymbol}${person.balance.toFixed(2)}`
+                          ? `owes ${formatCurrency(person.balance, currency)}`
                           : person.balance < 0
                             ? `settled`
                             : "settled"}
@@ -294,7 +295,7 @@ function LendingView() {
                             <span
                               className={lending.amount > 0 ? "text-red-600" : "text-green-600"}
                             >
-                              {lending.amount > 0 ? "-" : "+"}{currencySymbol}{Math.abs(lending.amount).toFixed(2)}
+                              {lending.amount > 0 ? "-" : "+"}{formatCurrency(Math.abs(lending.amount), currency)}
                             </span>
                             <Button
                               variant="ghost"

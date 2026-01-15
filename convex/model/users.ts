@@ -163,6 +163,24 @@ export async function deleteUserAndData(
     await ctx.db.delete(income._id);
   }
 
+  // Delete all bill payments
+  const billPayments = await ctx.db
+    .query("billPayments")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const payment of billPayments) {
+    await ctx.db.delete(payment._id);
+  }
+
+  // Delete all bills
+  const bills = await ctx.db
+    .query("bills")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const bill of bills) {
+    await ctx.db.delete(bill._id);
+  }
+
   // Delete the user
   await ctx.db.delete(userId);
 }

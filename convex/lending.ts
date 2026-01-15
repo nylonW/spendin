@@ -13,6 +13,19 @@ export const list = query({
   },
 });
 
+export const listByDateRange = query({
+  args: { deviceId: v.string(), startDate: v.string(), endDate: v.string() },
+  handler: async (ctx, { deviceId, startDate, endDate }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+    const lendings = await ctx.db
+      .query("lending")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    return lendings.filter((l) => l.date >= startDate && l.date <= endDate);
+  },
+});
+
 export const listByPerson = query({
   args: { deviceId: v.string(), personId: v.id("people") },
   handler: async (ctx, { deviceId, personId }) => {

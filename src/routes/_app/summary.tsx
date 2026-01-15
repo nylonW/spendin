@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@/lib/auth";
+import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,7 +27,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function SummaryView() {
-  const { deviceId, currencySymbol } = useAuth();
+  const { deviceId, currency } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const year = currentMonth.getFullYear();
@@ -106,25 +107,25 @@ function SummaryView() {
         <div className="p-3 space-y-4">
           {/* Overview Cards */}
           <div className="grid grid-cols-2 gap-2">
-            <Card className="p-3">
+            <Card className="p-3 gap-1">
               <div className="text-xs text-muted-foreground">Total Spending</div>
               <div className="text-lg font-semibold text-destructive">
-                {currencySymbol}{totalSpending.toFixed(2)}
+                {formatCurrency(totalSpending, currency)}
               </div>
             </Card>
-            <Card className="p-3">
+            <Card className="p-3 gap-1">
               <div className="text-xs text-muted-foreground">Remaining</div>
               <div
                 className={`text-lg font-semibold ${remaining >= 0 ? "text-green-600" : "text-destructive"}`}
               >
-                {currencySymbol}{remaining.toFixed(2)}
+                {formatCurrency(remaining, currency)}
               </div>
             </Card>
           </div>
 
           {/* Income vs Spending */}
           {monthlyIncome > 0 && (
-            <Card className="p-3">
+            <Card className="p-3 gap-2">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-muted-foreground">Budget Used</span>
                 <span className="text-xs font-medium">
@@ -136,8 +137,8 @@ function SummaryView() {
                 className="h-2"
               />
               <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
-                <span>{currencySymbol}{totalSpending.toFixed(0)} spent</span>
-                <span>{currencySymbol}{monthlyIncome.toFixed(0)} income</span>
+                <span>{formatCurrency(totalSpending, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })} spent</span>
+                <span>{formatCurrency(monthlyIncome, currency, { maximumFractionDigits: 0, minimumFractionDigits: 0 })} income</span>
               </div>
             </Card>
           )}
@@ -156,7 +157,7 @@ function SummaryView() {
                 sortedCategories.map(([category, amount]) => {
                   const percentage = totalSpending > 0 ? (amount / totalSpending) * 100 : 0;
                   return (
-                    <Card key={category} className="p-2.5">
+                    <Card key={category} className="p-2.5 gap-2">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <div
@@ -164,7 +165,7 @@ function SummaryView() {
                           />
                           <span className="text-sm">{category}</span>
                         </div>
-                        <span className="text-sm font-medium">{currencySymbol}{amount.toFixed(2)}</span>
+                        <span className="text-sm font-medium">{formatCurrency(amount, currency)}</span>
                       </div>
                       <Progress value={percentage} className="h-1" />
                     </Card>
@@ -176,27 +177,27 @@ function SummaryView() {
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-2">
-            <Card className="p-3">
+            <Card className="p-3 gap-1">
               <div className="flex items-center gap-1.5 mb-1">
                 <TrendingDown className="size-3 text-orange-500" />
                 <span className="text-xs text-muted-foreground">One-time</span>
               </div>
-              <div className="text-sm font-medium">{currencySymbol}{oneTimeTotal.toFixed(2)}</div>
+              <div className="text-sm font-medium">{formatCurrency(oneTimeTotal, currency)}</div>
             </Card>
-            <Card className="p-3">
+            <Card className="p-3 gap-1">
               <div className="flex items-center gap-1.5 mb-1">
                 <TrendingUp className="size-3 text-indigo-500" />
                 <span className="text-xs text-muted-foreground">Recurring</span>
               </div>
-              <div className="text-sm font-medium">{currencySymbol}{recurringTotal.toFixed(2)}</div>
+              <div className="text-sm font-medium">{formatCurrency(recurringTotal, currency)}</div>
             </Card>
           </div>
 
           {/* Savings */}
           {savings > 0 && (
-            <Card className="p-3">
+            <Card className="p-3 gap-1">
               <div className="text-xs text-muted-foreground mb-1">Current Savings</div>
-              <div className="text-lg font-semibold text-green-600">{currencySymbol}{savings.toFixed(2)}</div>
+              <div className="text-lg font-semibold text-green-600">{formatCurrency(savings, currency)}</div>
             </Card>
           )}
         </div>
