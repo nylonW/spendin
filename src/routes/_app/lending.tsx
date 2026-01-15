@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { convexQuery } from "@convex-dev/react-query";
+import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
@@ -56,10 +57,10 @@ function LendingView() {
     enabled: !!userId,
   });
 
-  const { mutate: addPerson } = useConvexMutation(api.people.add);
-  const { mutate: removePerson } = useConvexMutation(api.people.remove);
-  const { mutate: addLending } = useConvexMutation(api.lending.add);
-  const { mutate: removeLending } = useConvexMutation(api.lending.remove);
+  const addPerson = useMutation(api.people.add);
+  const removePerson = useMutation(api.people.remove);
+  const addLending = useMutation(api.lending.add);
+  const removeLending = useMutation(api.lending.remove);
 
   const handleAddPerson = () => {
     if (!userId || !newPersonName.trim()) return;

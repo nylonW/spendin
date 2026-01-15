@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { convexQuery } from "@convex-dev/react-query";
+import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect } from "react";
@@ -20,7 +21,7 @@ function IncomeView() {
     ...convexQuery(api.income.get, userId ? { userId } : "skip"),
     enabled: !!userId,
   });
-  const { mutate: upsertIncome } = useConvexMutation(api.income.upsert);
+  const upsertIncome = useMutation(api.income.upsert);
 
   const [salary, setSalary] = useState("");
   const [savings, setSavings] = useState("");

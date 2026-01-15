@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { useConvexMutation, convexQuery } from "@convex-dev/react-query";
+import { useMutation } from "convex/react";
 import { useQuery } from "@tanstack/react-query";
+import { convexQuery } from "@convex-dev/react-query";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 
@@ -35,9 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [cid, setCid] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const { mutateAsync: getOrCreateUser } = useConvexMutation(api.users.getOrCreate);
-  const { mutateAsync: generateSyncCodeMutation } = useConvexMutation(api.users.generateSyncCode);
-  const { mutateAsync: syncWithCodeMutation } = useConvexMutation(api.users.syncWithCode);
+  const getOrCreateUser = useMutation(api.users.getOrCreate);
+  const generateSyncCodeMutation = useMutation(api.users.generateSyncCode);
+  const syncWithCodeMutation = useMutation(api.users.syncWithCode);
 
   const { data: user } = useQuery({
     ...convexQuery(api.users.getByCid, cid ? { cid } : "skip"),

@@ -11,6 +11,7 @@ export const getRouter = () => {
     context: {
       queryClient,
     },
+    basepath: "/spendin",
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
   });

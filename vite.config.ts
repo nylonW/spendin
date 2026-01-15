@@ -9,6 +9,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 
 const config = defineConfig({
+  base: '/spendin/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

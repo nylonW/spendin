@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { convexQuery, useConvexMutation } from "@convex-dev/react-query";
+import { convexQuery } from "@convex-dev/react-query";
+import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
@@ -46,8 +47,8 @@ function RecurringView() {
     ...convexQuery(api.expenses.listByType, userId ? { userId, type: "recurring" as const } : "skip"),
     enabled: !!userId,
   });
-  const { mutate: addExpense } = useConvexMutation(api.expenses.add);
-  const { mutate: removeExpense } = useConvexMutation(api.expenses.remove);
+  const addExpense = useMutation(api.expenses.add);
+  const removeExpense = useMutation(api.expenses.remove);
 
   const totalMonthly = recurringExpenses?.reduce((s, e) => s + e.amount, 0) ?? 0;
 
