@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm dlx shadcn:*)",
+      "Bash(pnpm dlx:*)"
+    ]
+  }
+}
