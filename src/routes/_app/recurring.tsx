@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_app/recurring")({
 const CATEGORIES = ["Netflix", "Spotify", "Gym", "Rent", "Insurance", "Utilities", "Other"];
 
 function RecurringView() {
-  const { userId } = useAuth();
+  const { deviceId, currencySymbol } = useAuth();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newRecurring, setNewRecurring] = useState({
     name: "",
@@ -44,8 +44,8 @@ function RecurringView() {
   });
 
   const { data: recurringExpenses } = useQuery({
-    ...convexQuery(api.expenses.listByType, userId ? { userId, type: "recurring" as const } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.expenses.listByType, deviceId ? { deviceId, type: "recurring" as const } : "skip"),
+    enabled: !!deviceId,
   });
   const addExpense = useMutation(api.expenses.add);
   const removeExpense = useMutation(api.expenses.remove);
@@ -53,10 +53,10 @@ function RecurringView() {
   const totalMonthly = recurringExpenses?.reduce((s, e) => s + e.amount, 0) ?? 0;
 
   const handleAddRecurring = () => {
-    if (!userId || !newRecurring.name || !newRecurring.amount) return;
+    if (!deviceId || !newRecurring.name || !newRecurring.amount) return;
 
     addExpense({
-      userId,
+      deviceId,
       name: newRecurring.name,
       amount: parseFloat(newRecurring.amount),
       category: newRecurring.category,
@@ -75,13 +75,12 @@ function RecurringView() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-3 border-b shrink-0">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-sm font-medium">Monthly Recurring</span>
             <span className="text-xs text-muted-foreground ml-2">
-              ${totalMonthly.toFixed(2)}/mo
+              {currencySymbol}{totalMonthly.toFixed(2)}/mo
             </span>
           </div>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -187,12 +186,12 @@ function RecurringView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium">${expense.amount.toFixed(2)}</span>
+                  <span className="text-sm font-medium">{currencySymbol}{expense.amount.toFixed(2)}</span>
                   <Button
                     variant="ghost"
                     size="icon-sm"
                     className="size-6 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeExpense({ id: expense._id })}
+                    onClick={() => removeExpense({ deviceId: deviceId!, id: expense._id })}
                   >
                     <Trash2 className="size-3" />
                   </Button>

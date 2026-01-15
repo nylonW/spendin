@@ -26,7 +26,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function SummaryView() {
-  const { userId } = useAuth();
+  const { deviceId, currencySymbol } = useAuth();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const year = currentMonth.getFullYear();
@@ -36,12 +36,12 @@ function SummaryView() {
   const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
   const { data: allExpenses } = useQuery({
-    ...convexQuery(api.expenses.list, userId ? { userId } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.expenses.list, deviceId ? { deviceId } : "skip"),
+    enabled: !!deviceId,
   });
   const { data: income } = useQuery({
-    ...convexQuery(api.income.get, userId ? { userId } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.income.get, deviceId ? { deviceId } : "skip"),
+    enabled: !!deviceId,
   });
 
   const oneTimeExpenses =
@@ -109,7 +109,7 @@ function SummaryView() {
             <Card className="p-3">
               <div className="text-xs text-muted-foreground">Total Spending</div>
               <div className="text-lg font-semibold text-destructive">
-                ${totalSpending.toFixed(2)}
+                {currencySymbol}{totalSpending.toFixed(2)}
               </div>
             </Card>
             <Card className="p-3">
@@ -117,7 +117,7 @@ function SummaryView() {
               <div
                 className={`text-lg font-semibold ${remaining >= 0 ? "text-green-600" : "text-destructive"}`}
               >
-                ${remaining.toFixed(2)}
+                {currencySymbol}{remaining.toFixed(2)}
               </div>
             </Card>
           </div>
@@ -136,8 +136,8 @@ function SummaryView() {
                 className="h-2"
               />
               <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground">
-                <span>${totalSpending.toFixed(0)} spent</span>
-                <span>${monthlyIncome.toFixed(0)} income</span>
+                <span>{currencySymbol}{totalSpending.toFixed(0)} spent</span>
+                <span>{currencySymbol}{monthlyIncome.toFixed(0)} income</span>
               </div>
             </Card>
           )}
@@ -164,7 +164,7 @@ function SummaryView() {
                           />
                           <span className="text-sm">{category}</span>
                         </div>
-                        <span className="text-sm font-medium">${amount.toFixed(2)}</span>
+                        <span className="text-sm font-medium">{currencySymbol}{amount.toFixed(2)}</span>
                       </div>
                       <Progress value={percentage} className="h-1" />
                     </Card>
@@ -181,14 +181,14 @@ function SummaryView() {
                 <TrendingDown className="size-3 text-orange-500" />
                 <span className="text-xs text-muted-foreground">One-time</span>
               </div>
-              <div className="text-sm font-medium">${oneTimeTotal.toFixed(2)}</div>
+              <div className="text-sm font-medium">{currencySymbol}{oneTimeTotal.toFixed(2)}</div>
             </Card>
             <Card className="p-3">
               <div className="flex items-center gap-1.5 mb-1">
                 <TrendingUp className="size-3 text-indigo-500" />
                 <span className="text-xs text-muted-foreground">Recurring</span>
               </div>
-              <div className="text-sm font-medium">${recurringTotal.toFixed(2)}</div>
+              <div className="text-sm font-medium">{currencySymbol}{recurringTotal.toFixed(2)}</div>
             </Card>
           </div>
 
@@ -196,7 +196,7 @@ function SummaryView() {
           {savings > 0 && (
             <Card className="p-3">
               <div className="text-xs text-muted-foreground mb-1">Current Savings</div>
-              <div className="text-lg font-semibold text-green-600">${savings.toFixed(2)}</div>
+              <div className="text-lg font-semibold text-green-600">{currencySymbol}{savings.toFixed(2)}</div>
             </Card>
           )}
         </div>

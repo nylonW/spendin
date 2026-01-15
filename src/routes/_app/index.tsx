@@ -76,7 +76,7 @@ function isToday(date: Date): boolean {
 }
 
 function WeekView() {
-  const { userId } = useAuth();
+  const { deviceId, currencySymbol } = useAuth();
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const d = new Date();
     const day = d.getDay();
@@ -99,8 +99,8 @@ function WeekView() {
   const endDate = formatDate(weekDates[6]);
 
   const { data: expenses } = useQuery({
-    ...convexQuery(api.expenses.listByDateRange, userId ? { userId, startDate, endDate } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.expenses.listByDateRange, deviceId ? { deviceId, startDate, endDate } : "skip"),
+    enabled: !!deviceId,
   });
   const addExpense = useMutation(api.expenses.add);
   const removeExpense = useMutation(api.expenses.remove);
@@ -143,10 +143,10 @@ function WeekView() {
   };
 
   const handleAddExpense = () => {
-    if (!userId || !newExpense.name || !newExpense.amount) return;
+    if (!deviceId || !newExpense.name || !newExpense.amount) return;
 
     addExpense({
-      userId,
+      deviceId,
       name: newExpense.name,
       amount: parseFloat(newExpense.amount),
       category: newExpense.category,
@@ -177,7 +177,7 @@ function WeekView() {
             </Button>
           </div>
           <div className="text-xs text-muted-foreground">
-            Week total: <span className="font-medium text-foreground">${weekTotal.toFixed(2)}</span>
+            Week total: <span className="font-medium text-foreground">{currencySymbol}{weekTotal.toFixed(2)}</span>
           </div>
         </div>
 
@@ -207,7 +207,7 @@ function WeekView() {
                   <span
                     className={`text-[10px] ${isSelected ? "text-primary-foreground/80" : "text-muted-foreground"}`}
                   >
-                    ${dayTotal.toFixed(0)}
+                    {currencySymbol}{dayTotal.toFixed(0)}
                   </span>
                 )}
               </button>
@@ -227,7 +227,7 @@ function WeekView() {
             })}
           </span>
           <span className="text-xs text-muted-foreground ml-2">
-            ${todayExpenses.reduce((s, e) => s + e.amount, 0).toFixed(2)}
+            {currencySymbol}{todayExpenses.reduce((s, e) => s + e.amount, 0).toFixed(2)}
           </span>
         </div>
         <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -311,12 +311,12 @@ function WeekView() {
                   <span className="text-sm truncate">{expense.name}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-medium">${expense.amount.toFixed(2)}</span>
+                  <span className="text-sm font-medium">{currencySymbol}{expense.amount.toFixed(2)}</span>
                   <Button
                     variant="ghost"
                     size="icon-sm"
                     className="size-6 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeExpense({ id: expense._id })}
+                    onClick={() => removeExpense({ deviceId: deviceId!, id: expense._id })}
                   >
                     <Trash2 className="size-3" />
                   </Button>

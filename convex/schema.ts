@@ -3,12 +3,19 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    cid: v.string(), // client id - generated uuid stored in localStorage
     syncCode: v.optional(v.string()), // optional sync code for multi-device
+    currency: v.optional(v.string()), // USD, EUR, PLN
+    createdAt: v.number(),
+  }).index("by_syncCode", ["syncCode"]),
+
+  devices: defineTable({
+    deviceId: v.string(), // client id - generated uuid stored in localStorage
+    userId: v.id("users"),
+    name: v.optional(v.string()), // optional device name
     createdAt: v.number(),
   })
-    .index("by_cid", ["cid"])
-    .index("by_syncCode", ["syncCode"]),
+    .index("by_deviceId", ["deviceId"])
+    .index("by_user", ["userId"]),
 
   expenses: defineTable({
     userId: v.id("users"),

@@ -11,7 +11,7 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "deploy": "npm run build && wrangler deploy -c dist/server/wrangler.json"
+    "deploy": "pnpx convex deploy -y && pnpm run build && wrangler deploy -c dist/server/wrangler.json"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.13.8",

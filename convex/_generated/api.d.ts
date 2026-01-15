@@ -11,6 +11,7 @@
 import type * as expenses from "../expenses.js";
 import type * as income from "../income.js";
 import type * as lending from "../lending.js";
+import type * as model_users from "../model/users.js";
 import type * as people from "../people.js";
 import type * as users from "../users.js";
 
@@ -24,6 +25,7 @@ declare const fullApi: ApiFromModules<{
   expenses: typeof expenses;
   income: typeof income;
   lending: typeof lending;
+  "model/users": typeof model_users;
   people: typeof people;
   users: typeof users;
 }>;

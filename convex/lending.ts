@@ -1,9 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import * as Users from "./model/users";
 
 export const list = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
     return await ctx.db
       .query("lending")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -12,8 +14,16 @@ export const list = query({
 });
 
 export const listByPerson = query({
-  args: { personId: v.id("people") },
-  handler: async (ctx, { personId }) => {
+  args: { deviceId: v.string(), personId: v.id("people") },
+  handler: async (ctx, { deviceId, personId }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+
+    // Verify person belongs to user
+    const person = await ctx.db.get(personId);
+    if (!person || person.userId !== userId) {
+      throw new Error("Person not found");
+    }
+
     return await ctx.db
       .query("lending")
       .withIndex("by_person", (q) => q.eq("personId", personId))
@@ -22,8 +32,9 @@ export const listByPerson = query({
 });
 
 export const getBalanceByPerson = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
     const lendings = await ctx.db
       .query("lending")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -44,23 +55,40 @@ export const getBalanceByPerson = query({
 
 export const add = mutation({
   args: {
-    userId: v.id("users"),
+    deviceId: v.string(),
     personId: v.id("people"),
     amount: v.number(),
     note: v.optional(v.string()),
     date: v.string(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx, { deviceId, ...args }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+
+    // Verify person belongs to user
+    const person = await ctx.db.get(args.personId);
+    if (!person || person.userId !== userId) {
+      throw new Error("Person not found");
+    }
+
     return await ctx.db.insert("lending", {
       ...args,
+      userId,
       createdAt: Date.now(),
     });
   },
 });
 
 export const remove = mutation({
-  args: { id: v.id("lending") },
-  handler: async (ctx, { id }) => {
+  args: { deviceId: v.string(), id: v.id("lending") },
+  handler: async (ctx, { deviceId, id }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+
+    // Verify ownership
+    const lending = await ctx.db.get(id);
+    if (!lending || lending.userId !== userId) {
+      throw new Error("Lending record not found");
+    }
+
     await ctx.db.delete(id);
   },
 });

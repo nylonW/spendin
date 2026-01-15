@@ -1,38 +1,38 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import * as Users from "./model/users";
 
 export const getOrCreate = mutation({
-  args: { cid: v.string() },
-  handler: async (ctx, { cid }) => {
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_cid", (q) => q.eq("cid", cid))
-      .first();
-
-    if (existing) {
-      return existing._id;
-    }
-
-    return await ctx.db.insert("users", {
-      cid,
-      createdAt: Date.now(),
-    });
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const { userId } = await Users.getOrCreateUserForDevice(ctx, { deviceId });
+    return userId;
   },
 });
 
-export const getByCid = query({
-  args: { cid: v.string() },
-  handler: async (ctx, { cid }) => {
-    return await ctx.db
-      .query("users")
-      .withIndex("by_cid", (q) => q.eq("cid", cid))
-      .first();
+export const getByDeviceId = query({
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const device = await Users.getDevice(ctx, { deviceId });
+    if (!device) return null;
+
+    const user = await ctx.db.get(device.userId);
+    return user;
+  },
+});
+
+export const getDevices = query({
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+    return await Users.getDevicesForUser(ctx, { userId });
   },
 });
 
 export const generateSyncCode = mutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
     await ctx.db.patch(userId, { syncCode: code });
     return code;
@@ -40,31 +40,78 @@ export const generateSyncCode = mutation({
 });
 
 export const syncWithCode = mutation({
-  args: { syncCode: v.string(), newCid: v.string() },
-  handler: async (ctx, { syncCode, newCid }) => {
-    const user = await ctx.db
+  args: { syncCode: v.string(), deviceId: v.string() },
+  handler: async (ctx, { syncCode, deviceId }) => {
+    // Find user with this sync code
+    const targetUser = await ctx.db
       .query("users")
       .withIndex("by_syncCode", (q) => q.eq("syncCode", syncCode))
       .first();
 
-    if (!user) {
+    if (!targetUser) {
       return { success: false, error: "Invalid sync code" };
     }
 
-    // Check if newCid already has a user
-    const existingNewUser = await ctx.db
-      .query("users")
-      .withIndex("by_cid", (q) => q.eq("cid", newCid))
-      .first();
+    // Check if device already exists
+    const existingDevice = await Users.getDevice(ctx, { deviceId });
 
-    if (existingNewUser && existingNewUser._id !== user._id) {
-      // Delete the new user since we're syncing to existing account
-      await ctx.db.delete(existingNewUser._id);
+    if (existingDevice) {
+      // Device exists - transfer it to the target user
+      if (existingDevice.userId === targetUser._id) {
+        return { success: true, message: "Already synced" };
+      }
+      await Users.transferDeviceToUser(ctx, {
+        deviceId,
+        newUserId: targetUser._id,
+      });
+    } else {
+      // New device - just create it linked to target user
+      await ctx.db.insert("devices", {
+        deviceId,
+        userId: targetUser._id,
+        createdAt: Date.now(),
+      });
     }
 
-    // Add the new cid to the existing user (update cid to include both)
-    // For simplicity, we'll create a new user entry with same data pointing to same account
-    // Actually, let's just update localStorage on client side to use the synced user's cid
-    return { success: true, cid: user.cid };
+    return { success: true };
+  },
+});
+
+export const renameDevice = mutation({
+  args: { deviceId: v.string(), name: v.string() },
+  handler: async (ctx, { deviceId, name }) => {
+    const device = await Users.getDevice(ctx, { deviceId });
+    if (!device) {
+      throw new Error("Device not found");
+    }
+    await ctx.db.patch(device._id, { name });
+  },
+});
+
+export const removeDevice = mutation({
+  args: { deviceId: v.string(), targetDeviceId: v.string() },
+  handler: async (ctx, { deviceId, targetDeviceId }) => {
+    // Verify the requesting device owns this user
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+
+    const targetDevice = await Users.getDevice(ctx, { deviceId: targetDeviceId });
+    if (!targetDevice || targetDevice.userId !== userId) {
+      throw new Error("Device not found or not owned by this user");
+    }
+
+    // Can't remove your own device
+    if (deviceId === targetDeviceId) {
+      throw new Error("Cannot remove your own device");
+    }
+
+    await ctx.db.delete(targetDevice._id);
+  },
+});
+
+export const updateCurrency = mutation({
+  args: { deviceId: v.string(), currency: v.string() },
+  handler: async (ctx, { deviceId, currency }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+    await ctx.db.patch(userId, { currency });
   },
 });

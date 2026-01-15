@@ -3,91 +3,106 @@ import { useMutation } from "convex/react";
 import { useQuery } from "@tanstack/react-query";
 import { convexQuery } from "@convex-dev/react-query";
 import { api } from "../../convex/_generated/api";
-import type { Id } from "../../convex/_generated/dataModel";
 
-const STORAGE_KEY = "spendin_cid";
+const STORAGE_KEY = "spendin_device_id";
 
-function generateCid(): string {
+function generateDeviceId(): string {
   return crypto.randomUUID();
 }
 
-function getStoredCid(): string | null {
+function getStoredDeviceId(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(STORAGE_KEY);
 }
 
-function setStoredCid(cid: string): void {
+function setStoredDeviceId(deviceId: string): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(STORAGE_KEY, cid);
+  localStorage.setItem(STORAGE_KEY, deviceId);
 }
 
+export const CURRENCIES = {
+  USD: { symbol: "$", name: "US Dollar" },
+  EUR: { symbol: "€", name: "Euro" },
+  PLN: { symbol: "zł", name: "Polish Zloty" },
+} as const;
+
+export type CurrencyCode = keyof typeof CURRENCIES;
+
 interface AuthContextType {
-  cid: string | null;
-  userId: Id<"users"> | null;
+  deviceId: string | null;
   isLoading: boolean;
   syncCode: string | null;
+  currency: CurrencyCode;
+  currencySymbol: string;
   generateSyncCode: () => Promise<string | null>;
   syncWithCode: (code: string) => Promise<{ success: boolean; error?: string }>;
+  updateCurrency: (currency: CurrencyCode) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [cid, setCid] = useState<string | null>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const getOrCreateUser = useMutation(api.users.getOrCreate);
   const generateSyncCodeMutation = useMutation(api.users.generateSyncCode);
   const syncWithCodeMutation = useMutation(api.users.syncWithCode);
+  const updateCurrencyMutation = useMutation(api.users.updateCurrency);
 
   const { data: user } = useQuery({
-    ...convexQuery(api.users.getByCid, cid ? { cid } : "skip"),
-    enabled: !!cid,
+    ...convexQuery(api.users.getByDeviceId, deviceId ? { deviceId } : "skip"),
+    enabled: !!deviceId && isInitialized,
   });
 
   useEffect(() => {
-    let storedCid = getStoredCid();
-    if (!storedCid) {
-      storedCid = generateCid();
-      setStoredCid(storedCid);
+    let storedDeviceId = getStoredDeviceId();
+    if (!storedDeviceId) {
+      storedDeviceId = generateDeviceId();
+      setStoredDeviceId(storedDeviceId);
     }
-    setCid(storedCid);
+    setDeviceId(storedDeviceId);
     setIsInitialized(true);
   }, []);
 
   useEffect(() => {
-    if (cid && isInitialized) {
-      getOrCreateUser({ cid });
+    if (deviceId && isInitialized) {
+      getOrCreateUser({ deviceId });
     }
-  }, [cid, isInitialized, getOrCreateUser]);
+  }, [deviceId, isInitialized, getOrCreateUser]);
 
   const generateSyncCode = async () => {
-    if (!user?._id) return null;
-    const code = await generateSyncCodeMutation({ userId: user._id });
+    if (!deviceId) return null;
+    const code = await generateSyncCodeMutation({ deviceId });
     return code;
   };
 
   const syncWithCode = async (code: string) => {
-    if (!cid) return { success: false, error: "Not initialized" };
-    const result = await syncWithCodeMutation({ syncCode: code, newCid: cid });
-    if (result.success && result.cid) {
-      setStoredCid(result.cid);
-      setCid(result.cid);
-    }
+    if (!deviceId) return { success: false, error: "Not initialized" };
+    const result = await syncWithCodeMutation({ syncCode: code, deviceId });
     return result;
   };
 
-  const isLoading = !isInitialized || (cid !== null && user === undefined);
+  const updateCurrency = async (currency: CurrencyCode) => {
+    if (!deviceId) return;
+    await updateCurrencyMutation({ deviceId, currency });
+  };
+
+  const isLoading = !isInitialized || (deviceId !== null && user === undefined);
+  const currency = (user?.currency as CurrencyCode) || "USD";
+  const currencySymbol = CURRENCIES[currency]?.symbol || "$";
 
   return (
     <AuthContext.Provider
       value={{
-        cid,
-        userId: user?._id ?? null,
+        deviceId,
         isLoading,
         syncCode: user?.syncCode ?? null,
+        currency,
+        currencySymbol,
         generateSyncCode,
         syncWithCode,
+        updateCurrency,
       }}
     >
       {children}

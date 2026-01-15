@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_app/lending")({
 });
 
 function LendingView() {
-  const { userId } = useAuth();
+  const { deviceId, currencySymbol } = useAuth();
   const [isAddPersonOpen, setIsAddPersonOpen] = useState(false);
   const [isAddLendingOpen, setIsAddLendingOpen] = useState(false);
   const [newPersonName, setNewPersonName] = useState("");
@@ -45,16 +45,16 @@ function LendingView() {
   });
 
   const { data: people } = useQuery({
-    ...convexQuery(api.people.list, userId ? { userId } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.people.list, deviceId ? { deviceId } : "skip"),
+    enabled: !!deviceId,
   });
   const { data: lendings } = useQuery({
-    ...convexQuery(api.lending.list, userId ? { userId } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.lending.list, deviceId ? { deviceId } : "skip"),
+    enabled: !!deviceId,
   });
   const { data: balances } = useQuery({
-    ...convexQuery(api.lending.getBalanceByPerson, userId ? { userId } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.lending.getBalanceByPerson, deviceId ? { deviceId } : "skip"),
+    enabled: !!deviceId,
   });
 
   const addPerson = useMutation(api.people.add);
@@ -63,18 +63,18 @@ function LendingView() {
   const removeLending = useMutation(api.lending.remove);
 
   const handleAddPerson = () => {
-    if (!userId || !newPersonName.trim()) return;
-    addPerson({ userId, name: newPersonName.trim() });
+    if (!deviceId || !newPersonName.trim()) return;
+    addPerson({ deviceId, name: newPersonName.trim() });
     setNewPersonName("");
     setIsAddPersonOpen(false);
   };
 
   const handleAddLending = () => {
-    if (!userId || !newLending.personId || !newLending.amount) return;
+    if (!deviceId || !newLending.personId || !newLending.amount) return;
 
     const amount = parseFloat(newLending.amount);
     addLending({
-      userId,
+      deviceId,
       personId: newLending.personId as Id<"people">,
       amount: newLending.isRepayment ? -amount : amount,
       note: newLending.note || undefined,
@@ -107,7 +107,7 @@ function LendingView() {
           <div>
             <span className="text-sm font-medium">Money Lent</span>
             <span className="text-xs text-muted-foreground ml-2">
-              ${totalOwed.toFixed(2)} owed to you
+              {currencySymbol}{totalOwed.toFixed(2)} owed to you
             </span>
           </div>
           <div className="flex gap-1">
@@ -263,7 +263,7 @@ function LendingView() {
                         }
                       >
                         {person.balance > 0
-                          ? `owes $${person.balance.toFixed(2)}`
+                          ? `owes ${currencySymbol}${person.balance.toFixed(2)}`
                           : person.balance < 0
                             ? `settled`
                             : "settled"}
@@ -272,7 +272,7 @@ function LendingView() {
                         variant="ghost"
                         size="icon-sm"
                         className="size-6 text-muted-foreground hover:text-destructive"
-                        onClick={() => removePerson({ id: person._id })}
+                        onClick={() => removePerson({ deviceId: deviceId!, id: person._id })}
                       >
                         <Trash2 className="size-3" />
                       </Button>
@@ -294,13 +294,13 @@ function LendingView() {
                             <span
                               className={lending.amount > 0 ? "text-red-600" : "text-green-600"}
                             >
-                              {lending.amount > 0 ? "-" : "+"}${Math.abs(lending.amount).toFixed(2)}
+                              {lending.amount > 0 ? "-" : "+"}{currencySymbol}{Math.abs(lending.amount).toFixed(2)}
                             </span>
                             <Button
                               variant="ghost"
                               size="icon-sm"
                               className="size-5 text-muted-foreground/50 hover:text-destructive"
-                              onClick={() => removeLending({ id: lending._id })}
+                              onClick={() => removeLending({ deviceId: deviceId!, id: lending._id })}
                             >
                               <Trash2 className="size-2.5" />
                             </Button>

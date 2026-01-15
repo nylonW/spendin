@@ -1,9 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import * as Users from "./model/users";
 
 export const list = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, { userId }) => {
+  args: { deviceId: v.string() },
+  handler: async (ctx, { deviceId }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
     return await ctx.db
       .query("people")
       .withIndex("by_user", (q) => q.eq("userId", userId))
@@ -12,8 +14,9 @@ export const list = query({
 });
 
 export const add = mutation({
-  args: { userId: v.id("users"), name: v.string() },
-  handler: async (ctx, { userId, name }) => {
+  args: { deviceId: v.string(), name: v.string() },
+  handler: async (ctx, { deviceId, name }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
     return await ctx.db.insert("people", {
       userId,
       name,
@@ -23,15 +26,31 @@ export const add = mutation({
 });
 
 export const update = mutation({
-  args: { id: v.id("people"), name: v.string() },
-  handler: async (ctx, { id, name }) => {
+  args: { deviceId: v.string(), id: v.id("people"), name: v.string() },
+  handler: async (ctx, { deviceId, id, name }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+
+    // Verify ownership
+    const person = await ctx.db.get(id);
+    if (!person || person.userId !== userId) {
+      throw new Error("Person not found");
+    }
+
     await ctx.db.patch(id, { name });
   },
 });
 
 export const remove = mutation({
-  args: { id: v.id("people") },
-  handler: async (ctx, { id }) => {
+  args: { deviceId: v.string(), id: v.id("people") },
+  handler: async (ctx, { deviceId, id }) => {
+    const userId = await Users.getUserIdByDeviceId(ctx, { deviceId });
+
+    // Verify ownership
+    const person = await ctx.db.get(id);
+    if (!person || person.userId !== userId) {
+      throw new Error("Person not found");
+    }
+
     // Also remove all lending records for this person
     const lendings = await ctx.db
       .query("lending")

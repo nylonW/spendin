@@ -1,18 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth";
+import { useAuth, CURRENCIES, type CurrencyCode } from "@/lib/auth";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, Copy, Link2, RefreshCw, Smartphone } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Check, Copy, Link2, RefreshCw, Smartphone, Coins } from "lucide-react";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsView,
 });
 
 function SettingsView() {
-  const { syncCode, generateSyncCode, syncWithCode } = useAuth();
+  const { syncCode, generateSyncCode, syncWithCode, currency, updateCurrency } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState("");
@@ -52,6 +59,31 @@ function SettingsView() {
 
   return (
     <div className="p-3 space-y-4">
+      {/* Currency */}
+      <Card className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Coins className="size-4 text-primary" />
+          <h3 className="text-sm font-medium">Currency</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          Choose the currency to display amounts in.
+        </p>
+        <Select value={currency} onValueChange={(value) => updateCurrency(value as CurrencyCode)}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.entries(CURRENCIES) as [CurrencyCode, { symbol: string; name: string }][]).map(
+              ([code, { symbol, name }]) => (
+                <SelectItem key={code} value={code}>
+                  {symbol} - {name} ({code})
+                </SelectItem>
+              )
+            )}
+          </SelectContent>
+        </Select>
+      </Card>
+
       {/* Device Sync */}
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">

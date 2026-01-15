@@ -16,10 +16,10 @@ export const Route = createFileRoute("/_app/income")({
 });
 
 function IncomeView() {
-  const { userId } = useAuth();
+  const { deviceId, currencySymbol } = useAuth();
   const { data: income } = useQuery({
-    ...convexQuery(api.income.get, userId ? { userId } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.income.get, deviceId ? { deviceId } : "skip"),
+    enabled: !!deviceId,
   });
   const upsertIncome = useMutation(api.income.upsert);
 
@@ -35,10 +35,10 @@ function IncomeView() {
   }, [income]);
 
   const handleSave = () => {
-    if (!userId) return;
+    if (!deviceId) return;
 
     upsertIncome({
-      userId,
+      deviceId,
       salary: parseFloat(salary) || 0,
       savings: parseFloat(savings) || 0,
     });
@@ -56,8 +56,8 @@ function IncomeView() {
   };
 
   const { data: recurringExpenses } = useQuery({
-    ...convexQuery(api.expenses.listByType, userId ? { userId, type: "recurring" as const } : "skip"),
-    enabled: !!userId,
+    ...convexQuery(api.expenses.listByType, deviceId ? { deviceId, type: "recurring" as const } : "skip"),
+    enabled: !!deviceId,
   });
 
   const monthlyRecurring = recurringExpenses?.reduce((s, e) => s + e.amount, 0) ?? 0;
@@ -78,7 +78,7 @@ function IncomeView() {
           <Label className="text-xs text-muted-foreground">Net income after taxes</Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              $
+              {currencySymbol}
             </span>
             <Input
               type="number"
@@ -102,7 +102,7 @@ function IncomeView() {
           <Label className="text-xs text-muted-foreground">Amount you want to save each month</Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-              $
+              {currencySymbol}
             </span>
             <Input
               type="number"
@@ -130,24 +130,24 @@ function IncomeView() {
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Monthly Income</span>
-            <span className="font-medium">${salaryNum.toFixed(2)}</span>
+            <span className="font-medium">{currencySymbol}{salaryNum.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between text-destructive">
             <span>Recurring Expenses</span>
-            <span>-${monthlyRecurring.toFixed(2)}</span>
+            <span>-{currencySymbol}{monthlyRecurring.toFixed(2)}</span>
           </div>
 
           <div className="h-px bg-border" />
 
           <div className="flex justify-between">
             <span className="text-muted-foreground">After Recurring</span>
-            <span className="font-medium">${afterRecurring.toFixed(2)}</span>
+            <span className="font-medium">{currencySymbol}{afterRecurring.toFixed(2)}</span>
           </div>
 
           <div className="flex justify-between text-green-600">
             <span>Monthly Savings</span>
-            <span>-${savingsNum.toFixed(2)}</span>
+            <span>-{currencySymbol}{savingsNum.toFixed(2)}</span>
           </div>
 
           <div className="h-px bg-border" />
@@ -157,7 +157,7 @@ function IncomeView() {
             <span
               className={`font-semibold ${afterSavings >= 0 ? "text-primary" : "text-destructive"}`}
             >
-              ${afterSavings.toFixed(2)}
+              {currencySymbol}{afterSavings.toFixed(2)}
             </span>
           </div>
         </div>
