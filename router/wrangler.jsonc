@@ -1,0 +1,11 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "adianit-router",
+  "compatibility_date": "2025-01-02",
+  "main": "src/index.ts",
+  "routes": [{ "pattern": "adianit.com/*", "zone_name": "adianit.com" }],
+  "vars": {
+    "MARKETING_ORIGIN": "https://adianit-dev-website.vercel.app",
+    "MARKETING_HOST": "adianit.com"
+  }
+}

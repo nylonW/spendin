@@ -4,8 +4,11 @@
   "compatibility_date": "2025-01-02",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
+  "assets": {
+    "directory": "./dist/client"
+  },
   "routes": [
-    { "pattern": "adianit.com/spendin", "zone_name": "adianit.com" },
-    { "pattern": "adianit.com/spendin/*", "zone_name": "adianit.com" }
+    { "pattern": "adianit.com/spendin/*", "zone_name": "adianit.com" },
+    { "pattern": "adianit.com/spendin", "zone_name": "adianit.com" }
   ]
 }
