@@ -33,21 +33,43 @@ function WeekView() {
   const [paymentDate, setPaymentDate] = useState(getToday);
 
   const weekDates = getWeekDates(currentWeekStart);
-  const startDate = formatDateString(weekDates[0]);
-  const endDate = formatDateString(weekDates[6]);
+  const selectedDateStr = formatDateString(selectedDate);
   const currentDate = getToday();
 
-  const { data: expenses } = useQuery({
-    ...convexQuery(api.expenses.listByDateRange, deviceId ? { deviceId, startDate, endDate } : "skip"),
+  // Week range for calendar totals
+  const weekStartStr = formatDateString(weekDates[0]);
+  const weekEndStr = formatDateString(weekDates[6]);
+
+  // Check if selected date is within the visible week
+  const selectedInWeek = selectedDateStr >= weekStartStr && selectedDateStr <= weekEndStr;
+
+  // Query for the visible week (for calendar day totals)
+  const { data: weekExpenses } = useQuery({
+    ...convexQuery(api.expenses.listByDateRange, deviceId ? { deviceId, startDate: weekStartStr, endDate: weekEndStr } : "skip"),
     enabled: !!deviceId,
   });
+
+  // Query for the selected date specifically (for the list) - only if outside visible week
+  const { data: selectedDateExpenses } = useQuery({
+    ...convexQuery(api.expenses.listByDateRange, deviceId && !selectedInWeek ? { deviceId, startDate: selectedDateStr, endDate: selectedDateStr } : "skip"),
+    enabled: !!deviceId && !selectedInWeek,
+  });
+
   const { data: recurringExpenses } = useQuery({
     ...convexQuery(api.expenses.listByType, deviceId ? { deviceId, type: "recurring" as const } : "skip"),
     enabled: !!deviceId,
   });
-  const { data: lendings } = useQuery({
-    ...convexQuery(api.lending.listByDateRange, deviceId ? { deviceId, startDate, endDate } : "skip"),
+
+  // Query for the visible week lendings (for calendar day totals)
+  const { data: weekLendings } = useQuery({
+    ...convexQuery(api.lending.listByDateRange, deviceId ? { deviceId, startDate: weekStartStr, endDate: weekEndStr } : "skip"),
     enabled: !!deviceId,
+  });
+
+  // Query for the selected date lendings specifically (for the list) - only if outside visible week
+  const { data: selectedDateLendings } = useQuery({
+    ...convexQuery(api.lending.listByDateRange, deviceId && !selectedInWeek ? { deviceId, startDate: selectedDateStr, endDate: selectedDateStr } : "skip"),
+    enabled: !!deviceId && !selectedInWeek,
   });
   const { data: people } = useQuery({
     ...convexQuery(api.people.list, deviceId ? { deviceId } : "skip"),
@@ -64,9 +86,14 @@ function WeekView() {
 
   const peopleMap = new Map(people?.map((p) => [p._id, p.name]) ?? []);
 
-  const getSpendingForDate = (date: Date): SpendingItem[] => {
+  const getSpendingForDate = (date: Date, forSelectedDate = false): SpendingItem[] => {
     const dateStr = formatDateString(date);
     const dayOfMonth = date.getDate();
+    const isDateInWeek = dateStr >= weekStartStr && dateStr <= weekEndStr;
+
+    // Pick the right data source: use selected date queries if looking at selected date outside week
+    const expenses = forSelectedDate && !isDateInWeek ? selectedDateExpenses : weekExpenses;
+    const lendings = forSelectedDate && !isDateInWeek ? selectedDateLendings : weekLendings;
 
     // One-time expenses for this date
     const dayExpenses: SpendingItem[] =
@@ -130,8 +157,7 @@ function WeekView() {
     return [...dayExpenses, ...dayRecurring, ...dayLendings];
   };
 
-  const selectedDateStr = formatDateString(selectedDate);
-  const todaySpending = getSpendingForDate(selectedDate);
+  const todaySpending = getSpendingForDate(selectedDate, true);
 
   const getDayTotal = (date: Date) => {
     const items = getSpendingForDate(date);
