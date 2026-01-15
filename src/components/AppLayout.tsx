@@ -1,4 +1,4 @@
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
   Calendar,
   ChartPie,
@@ -21,6 +21,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { Separator } from "./ui/separator";
@@ -31,12 +32,46 @@ const navItems = [
   { to: "/recurring", icon: RefreshCw, label: "Recurring" },
   { to: "/lending", icon: HandCoins, label: "Lending" },
   { to: "/income", icon: Wallet, label: "Income" },
-];
+] as const;
+
+function NavLink({
+  to,
+  icon: Icon,
+  label,
+  isActive,
+}: {
+  to: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  isActive: boolean;
+}) {
+  const { setOpenMobile, isMobile } = useSidebar();
+
+  return (
+    <SidebarMenuButton
+      asChild
+      isActive={isActive}
+      tooltip={label}
+    >
+      <Link
+        to={to}
+        onClick={() => {
+          if (isMobile) {
+            setOpenMobile(false);
+          }
+        }}
+      >
+        <Icon className="size-4" />
+        <span>{label}</span>
+      </Link>
+    </SidebarMenuButton>
+  );
+}
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { isLoading } = useAuth();
-  const router = useRouter();
-  const pathname = router.state.location.pathname;
+  const location = useLocation();
+  const pathname = location.pathname;
 
   if (isLoading) {
     return (
@@ -63,18 +98,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarMenu>
                 {navItems.map((item) => (
                   <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      asChild
+                    <NavLink
+                      to={item.to}
+                      icon={item.icon}
+                      label={item.label}
                       isActive={
                         item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)
                       }
-                      tooltip={item.label}
-                    >
-                      <Link to={item.to}>
-                        <item.icon className="size-4" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
+                    />
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -84,12 +115,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === "/settings"} tooltip="Settings">
-                <Link to="/settings">
-                  <Settings className="size-4" />
-                  <span>Settings</span>
-                </Link>
-              </SidebarMenuButton>
+              <NavLink
+                to="/settings"
+                icon={Settings}
+                label="Settings"
+                isActive={pathname === "/settings"}
+              />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
